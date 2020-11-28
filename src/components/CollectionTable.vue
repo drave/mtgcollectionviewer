@@ -204,4 +204,7 @@ export default {
   .mtg-color--X {
     background-image: url('../assets/X.png');
   }
+  .mtg-color--S {
+    background-image: url('../assets/S.png');
+  }
 </style>
