@@ -7,7 +7,7 @@
           :sort-multiple-data="sortingPriority"
           :mobile-cards="false"
       >
-        <b-table-column field="reg_qty" label="Req Qty" width="50" numeric v-slot="props" sortable>
+        <b-table-column field="reg_qty" label="Reg Qty" width="50" numeric v-slot="props" sortable>
             {{ props.row.reg_qty }}
         </b-table-column>
 
