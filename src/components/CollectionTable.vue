@@ -2,10 +2,24 @@
   <section>
       <b-table
           :data="data"
+          :loading="loading"
+          :mobile-cards="false"
+
+          backend-filtering
           :debounce-search="1000"
+          @filters-change="onFilter"
+
+          paginated
+          backend-pagination
+          :per-page="perPage"
+          :total="total"
+          @page-change="onPageChange"
+
+          backend-sorting
           :sort-multiple="true"
           :sort-multiple-data="sortingPriority"
-          :mobile-cards="false"
+          @sorting-priority-removed="sortingPriorityRemoved"
+          @sort="onSort"
       >
         <b-table-column field="reg_qty" label="Reg Qty" width="50" numeric v-slot="props" sortable>
             {{ props.row.reg_qty }}
@@ -43,54 +57,25 @@
 </template>
 
 <script>
-
-import Papa from 'papaparse'
-import fileTemplate from '../assets/cards.csv';
+import axios from 'axios';
 
 export default {
   name: 'CollectionTable',
   data() {
     return {
       sortingPriority: [
-        { field: "set", order: 1 },
-        { field: "card", order: 2 },        
+        { field: "set", order: "asc" },
+        { field: "card", order: "asc" },
       ],
-      data: []
+      total: 0,
+      loading: false,
+      page: 1,
+      perPage: 100,
+      data: [],
+      filters: '',
     }
   },
   methods: {
-    loadTextFromFile() {
-      let rows = fileTemplate.split("\n");
-      let headers = rows.shift();
-      
-      headers = headers.replace('Total Qty', 'total_qty');
-      headers = headers.replace('Reg Qty', 'reg_qty');
-      headers = headers.replace('Foil Qty', 'foil_qty');
-      headers = headers.replace('Card', 'card');
-      headers = headers.replace('Set', 'set');
-      headers = headers.replace('Mana Cost', 'mana_cost');
-      headers = headers.replace('Card Type', 'card_type');
-      headers = headers.replace('Color', 'color');
-      headers = headers.replace('Rarity', 'rarity');
-      headers = headers.replace('Mvid', 'mvid');
-      headers = headers.replace('Single Price', 'single_price');
-      headers = headers.replace('Single Foil Price', 'single_foil_price');
-      headers = headers.replace('Total Price', 'total_price');
-      headers = headers.replace('Price Source', 'price_source');
-      headers = headers.replace('Notes', 'notes');
-
-      rows = rows.map(row => row.replace(/""/g, '&quot;'));
-
-      const csvData = [headers, ...rows].join("\n");
-
-      const json = Papa.parse(csvData, {
-        delimiter: ",",
-        newline: "\n",
-        header: true,
-      });
-
-      this.data = json.data;
-    },
     replaceMana(mana) {
       if (typeof mana === 'undefined') {
         return mana;
@@ -107,12 +92,65 @@ export default {
       }
 
       return costs;
-    }
+    },
+    loadAsyncData() {
+      const sortBy = JSON.stringify(this.sortingPriority)
+
+      const params = [
+          `sort_by=${sortBy}`,
+          `page=${this.page}`,
+          `filters=${this.filters}`
+      ].join('&')
+
+      this.loading = true
+      axios.get(`http://localhost:3000/cards?${params}`)
+          .then(({ data }) => {
+              // api.themoviedb.org manage max 1000 pages
+              this.data = []
+              let currentTotal = data.total_results
+              if (data.total_results / this.perPage > 1000) {
+                  currentTotal = this.perPage * 1000
+              }
+              this.total = currentTotal
+              data.results.forEach((item) => {
+                  this.data.push(item)
+              })
+              this.loading = false
+          })
+          .catch((error) => {
+              this.data = []
+              this.total = 0
+              this.loading = false
+              throw error
+          })
+    },
+    // Backend sorting
+    sortingPriorityRemoved(field){
+      this.sortingPriority = this.sortingPriority.filter(
+        (priority) => priority.field !== field)
+      this.loadAsyncData(this.sortingPriority)
+    },
+    onPageChange(page) {
+      this.page = page
+      this.loadAsyncData()
+    },
+    onSort(field, order) {
+      let existingPriority = this.sortingPriority.filter(i => i.field === field)[0]
+      if(existingPriority) {
+        existingPriority.order = existingPriority.order === 'desc' ? 'asc' : 'desc'
+      } else {
+        // request sorted data from backend
+        this.sortingPriority.push({field, order})
+      }
+      this.loadAsyncData()
+    },
+    onFilter(filter) {
+      this.filters = JSON.stringify(filter);
+      this.loadAsyncData()
+    },
   },
-  mounted: function () {
-    this.$nextTick(function () {
-      this.loadTextFromFile();
-    })
+  mounted() {
+    this.loadAsyncData()
   }
 }
 </script>
