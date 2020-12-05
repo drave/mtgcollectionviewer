@@ -52,7 +52,38 @@
         <b-table-column field="mana_cost" label="Mana cost" v-slot="props" sortable>
             <div v-html="replaceMana(props.row.mana_cost)"></div>
         </b-table-column>
+
+        <b-table-column field="price_trend" label="Price trend" width="50" numeric v-slot="props" sortable>
+            {{ props.row.price_trend || '' }}
+        </b-table-column>
+
+        <b-table-column field="price_average" label="Price average" width="50" numeric v-slot="props" sortable>
+            {{ props.row.price_average || '' }}
+        </b-table-column>
+
+        <b-table-column field="price_low" label="Price low" width="50" numeric v-slot="props" sortable>
+            {{ props.row.price_low || '' }}
+        </b-table-column>
+
+        <b-table-column field="price_foil_trend" label="Foil trend" width="50" numeric v-slot="props" sortable>
+            {{ props.row.price_foil_trend || '' }}
+        </b-table-column>
+
+        <b-table-column field="price_foil_low" label="Foil low" width="50" numeric v-slot="props" sortable>
+            {{ props.row.price_foil_low || '' }}
+        </b-table-column>
+
+        <b-table-column field="total_trend" label="Total trend" width="50" numeric v-slot="props" sortable>
+            {{ props.row.total_trend || '' }}
+        </b-table-column>
+
+        <b-table-column field="total_low" label="Total low" width="50" numeric v-slot="props" sortable>
+            {{ props.row.total_low || '' }}
+        </b-table-column>
       </b-table>
+      <h2>Total trend price: &euro;{{ totals.totalTrend || '' }}</h2>
+      <h2>Total low price: &euro;{{ totals.totalLow || '' }}</h2>
+      <br>
   </section>
 </template>
 
@@ -73,6 +104,7 @@ export default {
       perPage: 100,
       data: [],
       filters: '',
+      totals: {},
     }
   },
   methods: {
@@ -115,6 +147,9 @@ export default {
               data.results.forEach((item) => {
                   this.data.push(item)
               })
+
+              this.totals = data.totals;
+
               this.loading = false
           })
           .catch((error) => {
